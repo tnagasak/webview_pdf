@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:path/path.dart' as path;
+import 'package:webview_flutter/webview_flutter.dart';
 
 void main() {
   runApp(MyApp());
@@ -43,40 +45,77 @@ class WebViewPage extends StatefulWidget {
 
 class _WebViewPageState extends State<WebViewPage> {
   //
-  static const _initialUrl = 'https://www.google.com/?hl=ja';
+  // static const _initialUrl = 'https://docs.google.com/viewer?url=https%3A%2F%2Fwww.ohsho.co.jp%2Fmenu%2Fpdf%2Fallergy.pdf';
+  static const _initialUrl = 'https://www.ohsho.co.jp/menu/';
 
   WebViewController _webViewController;
 
-  void onPageStarted(String originalUriString) {
+  // void onPageStarted(String originalUriString) {
+  //   //
+  //   //
+
+  // }
+
+  Uri _pendingLoadUri;
+  // Timer _timer;
+
+  Future<NavigationDecision> onNavigationDelegate(NavigationRequest request) async {
     //
     //
+    print('DEBUG: onNavigationDelegate $request');
+
+    // return NavigationDecision.prevent;
     try {
-      final originalUri = Uri.parse(originalUriString);
+      final originalUri = Uri.parse(request.url);
       final ext = path.extension(originalUri.path);
 
-      print('ext: $ext');
+      print('DEBUG: $originalUri ext: $ext');
 
       if (ext == '.pdf' && Platform.isAndroid) {
+        print('DEBUG: isPDF and isAndroid');
+
         //
-        // https:///viewer?url=
-        //
-        final redirectUrl = Uri.https(
+        _pendingLoadUri = Uri.https(
           'docs.google.com',
           '/viewer',
           {
-            'url': originalUriString
-          }
+            'url': originalUri.toString(),
+          },
         );
 
-        print('redirect to $redirectUrl');
-        _webViewController?.loadUrl(redirectUrl.toString());
+        // _timer?.cancel();
+        // _timer = Timer(Duration(milliseconds: 300), onTimer);
+        print('DEBUG: loadUrl ${_pendingLoadUri.toString()}');
+        await _webViewController?.loadUrl(_pendingLoadUri.toString());
+        return NavigationDecision.prevent;
       }
-
     } catch (error) {
       //
       print('parse error: $error');
     }
+
+    return NavigationDecision.navigate;
   }
+
+  // void onTimer() async {
+  //   //
+  //   _timer = null;
+  //   print('DEBUG: onTimer');
+  //   if (_pendingLoadUri != null) {
+  //     print('DEBUG: loadUrl ${_pendingLoadUri.toString()}');
+  //     await _webViewController?.loadUrl(_pendingLoadUri.toString());
+  //     // _webViewController?.loadUrl('https://google.com/');
+  //     _pendingLoadUri = null;
+  //   }
+  // }
+
+  // void onPageFinished(String uri) {
+  //   print('DEBUG: onPageFinished redirectTo: ${_pendingLoadUri}');
+  //   // if (_pendingLoadUri != null) {
+  //   //   _webViewController?.loadUrl(_pendingLoadUri.toString());
+  //   //   _pendingLoadUri = null;
+  //   // }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -87,9 +126,10 @@ class _WebViewPageState extends State<WebViewPage> {
             child: WebView(
               initialUrl: _WebViewPageState._initialUrl,
               javascriptMode: JavascriptMode.unrestricted,
-              onWebViewCreated: (WebViewController webViewController) =>
-                  _webViewController = webViewController,
-              onPageStarted: onPageStarted,
+              onWebViewCreated: (WebViewController webViewController) => _webViewController = webViewController,
+              onPageStarted: (_) => print('DEBUG: onPageStarted'),
+              // onPageFinished: (_) => print('DEBUG: onPageFinished'), //onPageFinished,
+              navigationDelegate: onNavigationDelegate,
             )),
         Container(
           color: Colors.white,
