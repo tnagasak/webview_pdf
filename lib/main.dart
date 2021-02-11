@@ -1,13 +1,8 @@
-import 'dart:async';
-import 'dart:io';
-
+import 'package:advance_pdf_viewer/advance_pdf_viewer.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as path;
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-void main() {
-  runApp(MyApp());
-}
+void main() => runApp(ProviderScope(child: MyApp()));
 
 class MyApp extends StatelessWidget {
   @override
@@ -18,146 +13,109 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: MyHomePage(),
+      home: WebViewPage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
+// class WebViewPageController {
+//   //
+//   WebViewController _webViewController;
+//   WebViewPageController();
 
-class _MyHomePageState extends State<MyHomePage> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("WebView")),
-      body: WebViewPage(),
-    );
-  }
-}
+//   load() async {
+//     final pdf = await PDFDocument.fromURL('http://www.africau.edu/images/default/sample.pdf');
 
-class WebViewPage extends StatefulWidget {
-  @override
-  _WebViewPageState createState() => _WebViewPageState();
-}
+//   }
+// }
 
-class _WebViewPageState extends State<WebViewPage> {
+// final webViewPageCtrlProvider = Provider.autoDispose<WebViewPageController>((ref) {
+//   final ctrl = WebViewPageController();
+//   // ref.onDispose(() => ctrl)
+//   return ctrl;
+// });
+
+final pdfProvider = FutureProvider.family((ref, url) => PDFDocument.fromURL(url));
+
+class WebViewPage extends ConsumerWidget {
   //
   // static const _initialUrl = 'https://docs.google.com/viewer?url=https%3A%2F%2Fwww.ohsho.co.jp%2Fmenu%2Fpdf%2Fallergy.pdf';
-  static const _initialUrl = 'https://www.ohsho.co.jp/menu/';
+  // static const _initialUrl = 'https://www.ohsho.co.jp/menu/';
 
-  WebViewController _webViewController;
-
-  // void onPageStarted(String originalUriString) {
-  //   //
-  //   //
-
-  // }
-
-  Uri _pendingLoadUri;
-  // Timer _timer;
-
-  Future<NavigationDecision> onNavigationDelegate(NavigationRequest request) async {
-    //
-    //
-    print('DEBUG: onNavigationDelegate $request');
-
-    // return NavigationDecision.prevent;
-    try {
-      final originalUri = Uri.parse(request.url);
-      final ext = path.extension(originalUri.path);
-
-      print('DEBUG: $originalUri ext: $ext');
-
-      if (ext == '.pdf' && Platform.isAndroid) {
-        print('DEBUG: isPDF and isAndroid');
-
-        //
-        _pendingLoadUri = Uri.https(
-          'docs.google.com',
-          '/viewer',
-          {
-            'url': originalUri.toString(),
-          },
-        );
-
-        // _timer?.cancel();
-        // _timer = Timer(Duration(milliseconds: 300), onTimer);
-        print('DEBUG: loadUrl ${_pendingLoadUri.toString()}');
-        await _webViewController?.loadUrl(_pendingLoadUri.toString());
-        return NavigationDecision.prevent;
-      }
-    } catch (error) {
-      //
-      print('parse error: $error');
-    }
-
-    return NavigationDecision.navigate;
-  }
-
-  // void onTimer() async {
-  //   //
-  //   _timer = null;
-  //   print('DEBUG: onTimer');
-  //   if (_pendingLoadUri != null) {
-  //     print('DEBUG: loadUrl ${_pendingLoadUri.toString()}');
-  //     await _webViewController?.loadUrl(_pendingLoadUri.toString());
-  //     // _webViewController?.loadUrl('https://google.com/');
-  //     _pendingLoadUri = null;
-  //   }
-  // }
-
-  // void onPageFinished(String uri) {
-  //   print('DEBUG: onPageFinished redirectTo: ${_pendingLoadUri}');
-  //   // if (_pendingLoadUri != null) {
-  //   //   _webViewController?.loadUrl(_pendingLoadUri.toString());
-  //   //   _pendingLoadUri = null;
-  //   // }
-  // }
+  // Uri _pendingLoadUri;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-            flex: 1,
-            child: WebView(
-              initialUrl: _WebViewPageState._initialUrl,
-              javascriptMode: JavascriptMode.unrestricted,
-              onWebViewCreated: (WebViewController webViewController) => _webViewController = webViewController,
-              onPageStarted: (_) => print('DEBUG: onPageStarted'),
-              // onPageFinished: (_) => print('DEBUG: onPageFinished'), //onPageFinished,
-              navigationDelegate: onNavigationDelegate,
-            )),
-        Container(
-          color: Colors.white,
-          height: 20,
-          //省略
+  Widget build(BuildContext context, watch) => Scaffold(
+        body:
+            //
+            watch(pdfProvider('https://www.ohsho.co.jp/menu/pdf/allergy.pdf')).maybeWhen(
+          data: (document) => PDFViewer(document: document),
+          orElse: () => Center(
+            child: CircularProgressIndicator(),
+          ),
         ),
-      ],
-    );
-  }
+      );
+  // Timer _timer;
+
+  // Future<NavigationDecision> onNavigationDelegate(NavigationRequest request) async {
+  //   //
+  //   //
+  //   print('DEBUG: onNavigationDelegate $request');
+
+  //   // return NavigationDecision.prevent;
+  //   try {
+  //     final originalUri = Uri.parse(request.url);
+  //     final ext = path.extension(originalUri.path);
+
+  //     print('DEBUG: $originalUri ext: $ext');
+
+  //     if (ext == '.pdf' && Platform.isAndroid) {
+  //       print('DEBUG: isPDF and isAndroid');
+
+  //       //
+  //       _pendingLoadUri = Uri.https(
+  //         'docs.google.com',
+  //         '/viewer',
+  //         {
+  //           'url': originalUri.toString(),
+  //         },
+  //       );
+
+  //       // _timer?.cancel();
+  //       // _timer = Timer(Duration(milliseconds: 300), onTimer);
+  //       print('DEBUG: loadUrl ${_pendingLoadUri.toString()}');
+  //       await _webViewController?.loadUrl('https://google.com/' /* _pendingLoadUri.toString() */);
+  //       return NavigationDecision.prevent;
+  //     }
+  //   } catch (error) {
+  //     //
+  //     print('parse error: $error');
+  //   }
+
+  //   return NavigationDecision.navigate;
+  // }
+
+  // @override
+  // Widget build(BuildContext context) {
+  //   return Column(
+  //     children: [
+  //       Expanded(
+  //         flex: 1,
+  //         child: WebView(
+  //           initialUrl: WebViewPage._initialUrl,
+  //           javascriptMode: JavascriptMode.unrestricted,
+  //           onWebViewCreated: (WebViewController webViewController) => _webViewController = webViewController,
+  //           onPageStarted: (_) => print('DEBUG: onPageStarted'),
+  //           // onPageFinished: (_) => print('DEBUG: onPageFinished'), //onPageFinished,
+  //           navigationDelegate: onNavigationDelegate,
+  //         ),
+  //       ),
+  //       Container(
+  //         color: Colors.white,
+  //         height: 20,
+  //         //省略
+  //       ),
+  //     ],
+  //   );
+  // }
 }
-
-// class WebAndPdfViewController extends WebViewController{
-
-//   //下記super部分でエラー
-//   WebAndPdfViewController():super();
-//   final String googleDocs = "https://docs.google.com/viewer?url=";
-//   @override
-//   Future<void> loadUrl(String url, {Map<String, String> headers}){
-//     final String newUrl = createLoadUrl(url);
-//     return super.loadUrl(newUrl, headers);
-//   }
-
-//   String createLoadUrl(String url) {
-//     if (Platform.isAndroid) {
-//       return googleDocs + url;
-//     } else {
-//       return url;
-//     }
-//   }
-
-// }
